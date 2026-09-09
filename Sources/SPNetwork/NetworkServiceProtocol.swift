@@ -8,5 +8,5 @@
 import Foundation
 
 public protocol NetworkServiceProtocol {
-    func request<T: Decodable>(endpoint: Endpoint, responseModel: T.Type) async throws -> T
+    func request<T: Decodable>(endpoint: Endpoint, responseModel: T.Type, debug: Bool) async throws -> T
 }
