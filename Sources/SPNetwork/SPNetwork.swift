@@ -64,7 +64,7 @@ extension NetworkManager {
             \(urlRequest.allHTTPHeaderFields ?? [:])
             
             Body:
-            \(String(data: urlRequest.httpBody, encoding:.utf8 ) ?? "request body empty")
+            \(String(data: urlRequest.httpBody ?? Data(), encoding:.utf8 ) ?? "request body empty")
             
             """)
         }
