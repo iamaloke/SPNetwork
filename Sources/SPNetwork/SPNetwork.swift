@@ -37,8 +37,7 @@ extension NetworkManager {
         return url.appendingPathComponent(path)
     }
     
-    public func request<T: Decodable & Sendable>(endpoint: Endpoint, responseModel: T.Type) async throws -> T {
-        
+    public func request<T: Decodable & Sendable>(endpoint: Endpoint, responseModel: T.Type, debug: Bool = false) async throws -> T {
         let url = try makeURL(path: endpoint.path)
         
         var urlRequest = URLRequest(url: url)
@@ -52,10 +51,26 @@ extension NetworkManager {
         // Cache policy
         urlRequest.cachePolicy = .returnCacheDataElseLoad
         
+        if debug {
+            debugPrint("""
+            🚀 REQUEST
+            
+            URL:
+            \(urlRequest.url?.absoluteString ?? "")
+            
+            Method:
+            \(urlRequest.httpMethod ?? "")
+            
+            Headers:
+            \(urlRequest.allHTTPHeaderFields ?? [:])
+            
+            """)
+        }
+        
         return try await performRequest(request: urlRequest, retryCount: maxRetryCount, responseModel: responseModel)
     }
     
-    public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type) async throws -> T {
+    public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type, debug: Bool = false) async throws -> T {
         do {
             
             let (data, response) = try await session.data(for: request)
@@ -64,10 +79,24 @@ extension NetworkManager {
                 throw APIError.invalidResponse
             }
             
+            if debug {
+                debugPrint(
+                    """
+                    ✅ RESPONSE
+                    
+                    Status:
+                    \(httpResponse.statusCode)
+                    
+                    Body:
+                    \(String(data:data, encoding:.utf8 ) ?? "")
+                    """
+                )
+            }
+            
             guard 200...299 ~= httpResponse.statusCode else {
                 // Retry only for server errors
                 if retryCount > 0, 500...599 ~= httpResponse.statusCode {
-                    print("Retrying... attempts left: \(retryCount)")
+                    debugPrint("Retrying... attempts left: \(retryCount)")
                     return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel)
                 }
                 
@@ -83,7 +112,7 @@ extension NetworkManager {
         } catch {
             // Retry for network failures
             if retryCount > 0 {
-                print("Retrying due to network error...")
+                debugPrint("Retrying due to network error...")
                 return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel)
             }
             
