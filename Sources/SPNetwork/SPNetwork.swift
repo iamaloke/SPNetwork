@@ -5,11 +5,12 @@ import Foundation
 
 public final class NetworkManager: NetworkServiceProtocol {
     
+    private let config: APIConfig
     private let session: URLSession
     private let maxRetryCount = 3
     
-    public init() {
-        
+    public init(config: APIConfig) {
+        self.config = config
         let configuration = URLSessionConfiguration.default
         
         // URLCache Configuration
@@ -23,12 +24,20 @@ public final class NetworkManager: NetworkServiceProtocol {
         
         self.session = URLSession(configuration: configuration)
     }
+
+}
+
+// MARK: - Retry Logic
+
+extension NetworkManager {
+    
+    func makeURL(path: String) -> URL {
+        config.baseURL.appendingPathComponent(path)
+    }
     
     public func request<T: Decodable & Sendable>(endpoint: Endpoint, responseModel: T.Type) async throws -> T {
         
-        guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
-            throw APIError.invalidURL
-        }
+        let url = makeURL(path: endpoint.path)
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = endpoint.method.rawValue
@@ -43,11 +52,6 @@ public final class NetworkManager: NetworkServiceProtocol {
         
         return try await performRequest(request: urlRequest, retryCount: maxRetryCount, responseModel: responseModel)
     }
-}
-
-// MARK: - Retry Logic
-
-extension NetworkManager {
     
     public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type) async throws -> T {
         do {
