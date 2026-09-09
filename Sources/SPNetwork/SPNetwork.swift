@@ -31,13 +31,15 @@ public final class NetworkManager: NetworkServiceProtocol {
 
 extension NetworkManager {
     
-    func makeURL(path: String) -> URL {
-        config.baseURL.appendingPathComponent(path)
+    func makeURL(path: String) throws -> URL {
+        guard let url = config.baseURL else { throw APIError.invalidURL }
+        
+        return url.appendingPathComponent(path)
     }
     
     public func request<T: Decodable & Sendable>(endpoint: Endpoint, responseModel: T.Type) async throws -> T {
         
-        let url = makeURL(path: endpoint.path)
+        let url = try makeURL(path: endpoint.path)
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = endpoint.method.rawValue
