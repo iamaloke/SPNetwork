@@ -74,7 +74,6 @@ extension NetworkManager {
     
     public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type, debug: Bool = false) async throws -> T {
         do {
-            
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
@@ -82,26 +81,18 @@ extension NetworkManager {
             }
             
             if debug {
-                debugPrint(
-                    """
-                    ✅ RESPONSE
-                    
-                    Status:
-                    \(httpResponse.statusCode)
-                    
-                    Body:
-                    \(String(data:data, encoding:.utf8 ) ?? "")
-                    """
-                )
+                debugPrint("""
+            ✅ RESPONSE
+            
+            Status:
+            \(httpResponse.statusCode)
+            
+            Body:
+            \(String(data: data, encoding: .utf8) ?? "")
+            """)
             }
             
             guard 200...299 ~= httpResponse.statusCode else {
-                // Retry only for server errors
-                if retryCount > 0, 500...599 ~= httpResponse.statusCode {
-                    debugPrint("Retrying... attempts left: \(retryCount)")
-                    return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel)
-                }
-                
                 throw APIError.serverError(httpResponse.statusCode)
             }
             
@@ -112,13 +103,22 @@ extension NetworkManager {
             }
             
         } catch {
-            // Retry for network failures
-            if retryCount > 0 {
-                debugPrint("Retrying due to network error...")
-                return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel)
+            // Single retry decision point for everything: network errors AND server errors
+            let shouldRetry: Bool
+            if case APIError.serverError(let code) = error, 500...599 ~= code {
+                shouldRetry = true
+            } else if error is APIError {
+                shouldRetry = false // decoding errors, invalidResponse — don't retry these
+            } else {
+                shouldRetry = false // raw network/transport errors from session.data(for:)
             }
             
-            throw APIError.network(error)
+            if shouldRetry && retryCount > 0 {
+                debugPrint("Retrying... attempts left: \(retryCount - 1)")
+                return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel, debug: debug)
+            }
+            
+            throw error is APIError ? error : APIError.network(error)
         }
     }
 }
