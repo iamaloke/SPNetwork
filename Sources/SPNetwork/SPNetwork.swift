@@ -33,7 +33,6 @@ extension NetworkManager {
     
     func makeURL(path: String) throws -> URL {
         guard let url = config.baseURL else { throw APIError.invalidURL }
-        
         return url.appendingPathComponent(path)
     }
     
@@ -64,10 +63,13 @@ extension NetworkManager {
             Headers:
             \(urlRequest.allHTTPHeaderFields ?? [:])
             
+            Body:
+            \(String(data: urlRequest.httpBody, encoding:.utf8 ) ?? "request body empty")
+            
             """)
         }
         
-        return try await performRequest(request: urlRequest, retryCount: maxRetryCount, responseModel: responseModel)
+        return try await performRequest(request: urlRequest, retryCount: maxRetryCount, responseModel: responseModel, debug: debug)
     }
     
     public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type, debug: Bool = false) async throws -> T {
