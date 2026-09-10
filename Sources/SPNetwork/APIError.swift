@@ -23,7 +23,7 @@ public enum APIError: Error {
     case unauthorized
     case forbidden
     case notFound
-    case serverError(_ code: Int)
+    case serverError(_ message: String, _ code: Int)
     
     // MARK: - Parsing Errors
     case decodingError(Error)
@@ -66,8 +66,8 @@ extension APIError: LocalizedError {
         case .notFound:
             return "Requested resource was not found."
             
-        case .serverError(let statusCode):
-            return "Server error occurred. Status code: \(statusCode)"
+        case .serverError(let message, _):
+            return message
             
         case .decodingError:
             return "Failed to decode server response."

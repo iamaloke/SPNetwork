@@ -93,7 +93,8 @@ extension NetworkManager {
             }
             
             guard 200...299 ~= httpResponse.statusCode else {
-                throw APIError.serverError(httpResponse.statusCode)
+                let errorResponse = try? JSONDecoder() .decode(APIErrorResponse.self, from: data)
+                throw APIError.serverError(errorResponse?.message ?? "Something went wrong", httpResponse.statusCode )
             }
             
             do {
@@ -105,12 +106,16 @@ extension NetworkManager {
         } catch {
             // Single retry decision point for everything: network errors AND server errors
             let shouldRetry: Bool
-            if case APIError.serverError(let code) = error, 500...599 ~= code {
+            
+            switch error {
+            case APIError.serverError(_, let code):
+                shouldRetry = (500...599).contains(code)
+                
+            case APIError.network:
                 shouldRetry = true
-            } else if error is APIError {
-                shouldRetry = false // decoding errors, invalidResponse — don't retry these
-            } else {
-                shouldRetry = false // raw network/transport errors from session.data(for:)
+                
+            default:
+                shouldRetry = false
             }
             
             if shouldRetry && retryCount > 0 {
@@ -118,7 +123,11 @@ extension NetworkManager {
                 return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel, debug: debug)
             }
             
-            throw error is APIError ? error : APIError.network(error)
+            if let apiError = error as? APIError {
+                throw apiError
+            }
+            
+            throw APIError.network(error)
         }
     }
 }
