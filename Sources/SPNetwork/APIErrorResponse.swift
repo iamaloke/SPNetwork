@@ -9,7 +9,7 @@ import Foundation
 
 public struct APIErrorResponse: Decodable {
     let success: Bool
-    let message: String
+    let error: String
     let data: EmptyData?
     let timestamp: String
     let statusCode: Int
