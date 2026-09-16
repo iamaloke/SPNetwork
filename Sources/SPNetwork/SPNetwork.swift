@@ -13,7 +13,6 @@ public final class NetworkManager: NetworkServiceProtocol {
         self.config = config
         let configuration = URLSessionConfiguration.default
         
-        // URLCache Configuration
         configuration.urlCache = URLCache(
             memoryCapacity: 20 * 1024 * 1024,
             diskCapacity: 100 * 1024 * 1024,
@@ -24,7 +23,7 @@ public final class NetworkManager: NetworkServiceProtocol {
         
         self.session = URLSession(configuration: configuration)
     }
-
+    
 }
 
 // MARK: - Retry Logic
@@ -47,7 +46,6 @@ extension NetworkManager {
             urlRequest.setValue($1, forHTTPHeaderField: $0)
         }
         
-        // Cache policy
         urlRequest.cachePolicy = .returnCacheDataElseLoad
         
         if debug {
@@ -94,7 +92,7 @@ extension NetworkManager {
             
             guard 200...299 ~= httpResponse.statusCode else {
                 let errorResponse = try? JSONDecoder() .decode(APIErrorResponse.self, from: data)
-                throw APIError.serverError(errorResponse?.message ?? "Something went wrong", httpResponse.statusCode )
+                throw APIError.serverError(errorResponse?.error ?? "Something went wrong", httpResponse.statusCode )
             }
             
             do {
@@ -104,7 +102,6 @@ extension NetworkManager {
             }
             
         } catch {
-            // Single retry decision point for everything: network errors AND server errors
             let shouldRetry: Bool
             
             switch error {
@@ -119,15 +116,13 @@ extension NetworkManager {
             }
             
             if shouldRetry && retryCount > 0 {
-                debugPrint("Retrying... attempts left: \(retryCount - 1)")
+                if debug {
+                    debugPrint("Retrying... attempts left: \(retryCount - 1)")
+                }
                 return try await performRequest(request: request, retryCount: retryCount - 1, responseModel: responseModel, debug: debug)
             }
             
-            if let apiError = error as? APIError {
-                throw apiError
-            }
-            
-            throw APIError.network(error)
+            throw error
         }
     }
 }
