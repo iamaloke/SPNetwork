@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct APIErrorResponse: Decodable {
+public struct APIErrorResponse: Decodable & Sendable {
     let success: Bool
     let error: String
     let data: EmptyData?
@@ -16,4 +16,4 @@ public struct APIErrorResponse: Decodable {
 }
 
 
-public struct EmptyData: Decodable {}
+public struct EmptyData: Decodable & Sendable {}

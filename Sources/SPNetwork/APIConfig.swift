@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct APIConfig {
+public struct APIConfig: Sendable {
     public let baseURL: URL?
     public let apiKey: String?
     
