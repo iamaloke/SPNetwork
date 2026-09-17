@@ -70,7 +70,7 @@ extension NetworkManager {
         return try await performRequest(request: urlRequest, retryCount: maxRetryCount, responseModel: responseModel, debug: debug)
     }
     
-    public func performRequest<T: Decodable>(request: URLRequest, retryCount: Int, responseModel: T.Type, debug: Bool = false) async throws -> T {
+    public func performRequest<T: Decodable & Sendable>(request: URLRequest, retryCount: Int, responseModel: T.Type, debug: Bool = false) async throws -> T {
         do {
             let (data, response) = try await session.data(for: request)
             
